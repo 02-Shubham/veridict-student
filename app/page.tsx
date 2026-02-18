@@ -6,6 +6,7 @@ import { LoginScreen } from '../components/screens/LoginScreen'
 import { ExamCodeScreen } from '../components/screens/ExamCodeScreen'
 import { WaitingRoomScreen } from '../components/screens/WaitingRoomScreen'
 import { ExamScreen } from '../components/screens/ExamScreen'
+import { ChecklistScreen } from '../components/screens/ChecklistScreen'
 import { ConfirmationScreen } from '../components/screens/ConfirmationScreen'
 import { ErrorScreen } from '../components/screens/ErrorScreen'
 import { proctoringService } from '../lib/services/proctoring'
@@ -31,6 +32,7 @@ export default function Home() {
       {screen === 'LOGIN' && <LoginScreen />}
       {screen === 'EXAM_CODE' && <ExamCodeScreen />}
       {screen === 'WAITING_ROOM' && <WaitingRoomScreen />}
+      {screen === 'CHECKLIST' && <ChecklistScreen />}
       {screen === 'EXAM' && <ExamScreen />}
       {screen === 'CONFIRMATION' && <ConfirmationScreen />}
       {screen === 'ERROR' && <ErrorScreen />}

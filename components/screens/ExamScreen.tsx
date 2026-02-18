@@ -17,13 +17,82 @@ function formatTime(seconds: number): string {
 
 export const ExamScreen: React.FC = () => {
   const { setScreen } = useUIStore()
-  const { session, answers, setAnswer, autoSaveStatus, setAutoSaveStatus, setLastSavedAt, lastSavedAt, setSubmission } = useExamStore()
+  const { session, answers, autoSaveStatus, lastSavedAt } = useExamStore()
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [timeLeft, setTimeLeft] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const autoSaveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Helper helper to access latest state without re-rendering dependencies
+  const getCleanState = () => useExamStore.getState()
+
+  const triggerAutoSave = useCallback(async () => {
+    const { session, answers, setAutoSaveStatus, setLastSavedAt } = getCleanState()
+    if (!session) return
+    
+    setAutoSaveStatus('saving')
+    try {
+      for (const [qId, ans] of Object.entries(answers)) {
+        await storageService.saveAnswer(session.examId, qId, ans.value)
+      }
+      const now = new Date().toLocaleTimeString()
+      setLastSavedAt(now)
+      setAutoSaveStatus('saved')
+    } catch {
+      setAutoSaveStatus('offline')
+    }
+  }, [])
+
+  const handleAutoSubmit = useCallback(async () => {
+    const { session, answers, setSubmission } = getCleanState()
+    if (!session) return
+    
+    setSubmitting(true)
+    try {
+      await triggerAutoSave()
+      const result = await examService.submitExam(session.examId, answers)
+      setSubmission(result)
+      proctoringService.exitFullscreen()
+      setScreen('CONFIRMATION')
+    } catch {
+      setScreen('ERROR')
+    }
+  }, [triggerAutoSave, setScreen])
+
+  const handleManualSubmit = async () => {
+    const { session, answers, setSubmission } = getCleanState()
+    if (!session) return
+
+    setShowConfirmDialog(false)
+    setSubmitting(true)
+    try {
+      await triggerAutoSave()
+      const result = await examService.submitExam(session.examId, answers)
+      setSubmission(result)
+      proctoringService.exitFullscreen()
+      setScreen('CONFIRMATION')
+    } catch {
+      setSubmitting(false)
+      setScreen('ERROR')
+    }
+  }
+
+  const handleAnswerChange = async (questionId: string, value: string) => {
+    const { session, setAnswer, setAutoSaveStatus, setLastSavedAt } = getCleanState()
+    if (!session) return
+
+    setAnswer(questionId, value)
+    setAutoSaveStatus('saving')
+    try {
+      await storageService.saveAnswer(session.examId, questionId, value)
+      setLastSavedAt(new Date().toLocaleTimeString())
+      setAutoSaveStatus('saved')
+    } catch {
+      setAutoSaveStatus('offline')
+    }
+  }
 
   // Initialize timer
   useEffect(() => {
@@ -36,6 +105,7 @@ export const ExamScreen: React.FC = () => {
   // Countdown timer
   useEffect(() => {
     if (timeLeft <= 0) return
+    
     const interval = setInterval(() => {
       setTimeLeft((t) => {
         if (t <= 1) {
@@ -46,8 +116,9 @@ export const ExamScreen: React.FC = () => {
         return t - 1
       })
     }, 1000)
+    
     return () => clearInterval(interval)
-  }, [timeLeft > 0])
+  }, [timeLeft > 0, handleAutoSubmit])
 
   // Load saved answers on mount
   useEffect(() => {
@@ -57,11 +128,8 @@ export const ExamScreen: React.FC = () => {
         useExamStore.getState().loadAnswers(saved)
       }
     })
-    // Set exam context for proctoring
+    
     storageService.logProctoringEvent(session.examId, {
-      type: 'FOCUS_LOSS', // Placeholder or initial event? "EXAM_START" isn't in type definition but FOCUS_LOSS is safe fallback or we add new type.
-      // Wait, proctoringService listens to events globally. Here we just log initial state?
-      // Actually, let's just ensure fullscreen:
       type: 'WINDOW_SWITCH',
       timestamp: new Date().toISOString(),
       metadata: 'Exam Screen Mount'
@@ -69,73 +137,17 @@ export const ExamScreen: React.FC = () => {
     proctoringService.enterFullscreen()
   }, [session])
 
-  // Auto-save every 30 seconds
+  // Auto-save interval
   useEffect(() => {
     if (!session) return
     autoSaveTimerRef.current = setInterval(() => {
       triggerAutoSave()
     }, 30_000)
+    
     return () => {
       if (autoSaveTimerRef.current) clearInterval(autoSaveTimerRef.current)
     }
-  }, [session, answers])
-
-  const triggerAutoSave = useCallback(async () => {
-    if (!session) return
-    setAutoSaveStatus('saving')
-    try {
-      for (const [qId, ans] of Object.entries(answers)) {
-        await storageService.saveAnswer(session.examId, qId, ans.value)
-      }
-      const now = new Date().toLocaleTimeString()
-      setLastSavedAt(now)
-      setAutoSaveStatus('saved')
-    } catch {
-      setAutoSaveStatus('offline')
-    }
-  }, [session, answers, setAutoSaveStatus, setLastSavedAt])
-
-  const handleAnswerChange = async (questionId: string, value: string) => {
-    setAnswer(questionId, value)
-    // Debounced save on change
-    setAutoSaveStatus('saving')
-    try {
-      await storageService.saveAnswer(session!.examId, questionId, value)
-      setLastSavedAt(new Date().toLocaleTimeString())
-      setAutoSaveStatus('saved')
-    } catch {
-      setAutoSaveStatus('offline')
-    }
-  }
-
-  const handleAutoSubmit = useCallback(async () => {
-    if (!session || submitting) return
-    setSubmitting(true)
-    try {
-      await triggerAutoSave()
-      const result = await examService.submitExam(session.examId, answers)
-      setSubmission(result)
-      proctoringService.exitFullscreen()
-      setScreen('CONFIRMATION')
-    } catch {
-      setScreen('ERROR')
-    }
-  }, [session, submitting, triggerAutoSave, setSubmission, setScreen, answers])
-
-  const handleManualSubmit = async () => {
-    setShowConfirmDialog(false)
-    setSubmitting(true)
-    try {
-      await triggerAutoSave()
-      const result = await examService.submitExam(session!.examId, answers)
-      setSubmission(result)
-      proctoringService.exitFullscreen()
-      setScreen('CONFIRMATION')
-    } catch {
-      setSubmitting(false)
-      setScreen('ERROR')
-    }
-  }
+  }, [session, triggerAutoSave])
 
   if (!session) return null
 

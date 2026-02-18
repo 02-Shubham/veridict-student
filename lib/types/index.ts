@@ -11,7 +11,7 @@ export interface Student {
 export interface Question {
   id: string
   text: string
-  type: 'text' | 'mcq' | 'checkbox'
+  type: 'text' | 'mcq' | 'checkbox' | 'short_answer' | 'essay'
   options?: string[]
   marks?: number
 }
@@ -60,4 +60,5 @@ export type AppScreen =
   | 'WAITING_ROOM'
   | 'EXAM'
   | 'CONFIRMATION'
+  | 'CHECKLIST'
   | 'ERROR'

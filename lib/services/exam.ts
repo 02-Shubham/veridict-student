@@ -63,26 +63,71 @@ export const examService = {
       }
 
       const data = examSnap.data()
-      // Check if questions are in a subcollection or array field
-      let questions = data.questions || []
+      console.log('Exam data loaded:', { examId, name: data.name, duration: data.duration })
       
-      if (!questions.length) {
-        // Fallback: Check subcollection 'questions'
-        const questionsRef = collection(db, 'exams', examId, 'questions')
-        const qSnap = await getDocs(questionsRef)
-        questions = qSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+      // Fetch questions from separate 'questions' collection where examId matches
+      console.log('Fetching questions from questions collection...')
+      const questionsQuery = query(
+        collection(db, 'questions'),
+        where('examId', '==', examId)
+      )
+      const questionsSnap = await getDocs(questionsQuery)
+      
+      console.log('Found questions:', questionsSnap.size)
+      
+      if (questionsSnap.empty) {
+        throw new Error('No questions found for this exam. Please contact your instructor.')
       }
 
+      // Map questions to the format expected by the app
+      const questions = questionsSnap.docs.map(doc => {
+        const qData = doc.data()
+        
+        // Map teacher dashboard question types to student app types
+        let questionType: 'text' | 'mcq' | 'checkbox' = 'text'
+        const teacherType = qData.type?.toUpperCase()
+        
+        if (teacherType === 'MCQ') {
+          questionType = 'mcq'
+        } else if (teacherType === 'MATCH' || teacherType === 'FILL_GAPS') {
+          questionType = 'checkbox'
+        } else if (teacherType === 'SHORT_ANSWER' || teacherType === 'ESSAY' || teacherType === 'ATTACHMENT') {
+          questionType = 'text'
+        }
+        
+        return {
+          id: doc.id,
+          text: qData.text || '',
+          type: questionType,
+          options: qData.options || [],
+          marks: qData.points || 0,
+          order: qData.createdAt?.seconds || 0 // Use timestamp for ordering
+        }
+      })
+
+      // Sort questions by creation time (oldest first)
+      questions.sort((a: any, b: any) => a.order - b.order)
+      
+      console.log('Questions loaded and sorted:', questions.length)
+
       // Ensure start/end times are strings
-      const startTime = data.startTime?.toDate?.()?.toISOString() || data.startTime
-      const endTime = data.endTime?.toDate?.()?.toISOString() || data.endTime
+      const now = new Date()
+      const startTime = data.startTime?.toDate?.()?.toISOString() || data.startTime || now.toISOString()
+      
+      let endTime = data.endTime?.toDate?.()?.toISOString() || data.endTime
+      if (!endTime && data.duration) {
+        const start = new Date(startTime)
+        endTime = new Date(start.getTime() + (data.duration * 60000)).toISOString()
+      } else if (!endTime) {
+        endTime = new Date(now.getTime() + 3600000).toISOString()
+      }
 
       return {
         examId,
-        title: data.title,
+        title: data.name || data.title || 'Untitled Exam',
         candidateId: 'CAND-SESSION', // Should come from auth context
-        questions: questions.sort((a: any, b: any) => (a.order || 0) - (b.order || 0)),
-        duration: data.duration,
+        questions,
+        duration: data.duration || 60,
         startTime,
         endTime
       }
@@ -95,14 +140,21 @@ export const examService = {
   async submitExam(examId: string, answers: Record<string, any>): Promise<SubmissionResult> {
     try {
       const submissionId = `sub-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+      
+      // Get student info from auth if available
+      const studentId = 'student-' + Math.random().toString(36).substring(7) // Replace with actual auth.currentUser.uid
+      
       const payload = {
         examId,
+        studentId,
         answers,
         submittedAt: new Date().toISOString(),
-        blockchainStatus: 'pending'
+        blockchainStatus: 'pending' as const,
+        timeSpent: 0 // Calculate actual time spent
       }
 
       await setDoc(doc(db, 'submissions', submissionId), payload)
+      console.log('Exam submitted successfully:', submissionId)
       
       // Mock hash for display
       const payloadHash = 'hash-' + Math.random().toString(36).substring(7)

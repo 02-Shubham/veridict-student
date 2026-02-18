@@ -76,20 +76,27 @@ export const ExamCodeScreen: React.FC = () => {
       }
 
       if (now < startTime) {
-        // Go to waiting room
+        // Exam hasn't started yet - go to waiting room
         setSession(partialSession)
         setScreen('WAITING_ROOM')
       } else {
-        // Fetch paper immediately
-        const paper = await examService.getExamPaper(result.examId!)
-        setSession({
-          ...partialSession,
-          questions: paper.questions,
-          duration: paper.duration,
-          startTime: paper.startTime,
-          endTime: paper.endTime
-        })
-        setScreen('EXAM')
+        // Exam has started - fetch questions and go to checklist
+        try {
+          const paper = await examService.getExamPaper(result.examId!)
+          setSession({
+            ...partialSession,
+            questions: paper.questions,
+            duration: paper.duration,
+            startTime: paper.startTime,
+            endTime: paper.endTime
+          })
+          setScreen('CHECKLIST')
+        } catch (questionError: any) {
+          // If questions fail to load, show error
+          setLocalError(questionError.message || 'Failed to load exam questions')
+          setLoading(false)
+          return
+        }
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Validation failed'
