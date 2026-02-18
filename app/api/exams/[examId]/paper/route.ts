@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
-export async function GET(request: Request, context: { params: { examId: string } }) {
-  const { examId } = context.params
+export async function GET(request: Request, context: { params: Promise<{ examId: string }> }) {
+  const { examId } = await context.params
 
   if (examId === 'mock-exam-001' || examId === 'mock-exam-future') {
     return NextResponse.json({

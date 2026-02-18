@@ -17,7 +17,10 @@ export default function Home() {
   useEffect(() => {
     setMounted(true)
     // Setup global proctoring listeners (e.g. context menu block)
-    const cleanup = proctoringService.setupListeners()
+    const cleanup = proctoringService.setupListeners((event) => {
+      // Log proctoring events (could be sent to backend in production)
+      console.log('Proctoring event:', event)
+    })
     return cleanup
   }, [])
 

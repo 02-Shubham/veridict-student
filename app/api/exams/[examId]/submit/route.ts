@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 
-export async function POST(request: Request, context: { params: { examId: string } }) {
-  const { examId } = context.params
+export async function POST(request: Request, context: { params: Promise<{ examId: string }> }) {
+  const { examId } = await context.params
   try {
     const body = await request.json()
     const { answers } = body

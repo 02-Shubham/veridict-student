@@ -74,6 +74,10 @@ export const LoginScreen: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.bgGrid} aria-hidden />
+      
+      {/* Decorative background shapes */}
+      <div className={styles.bgDecor} aria-hidden />
+      <div className={styles.bgDecor2} aria-hidden />
 
       <div className={styles.card}>
         <div className={styles.logo}>

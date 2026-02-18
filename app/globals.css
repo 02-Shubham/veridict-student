@@ -1,34 +1,56 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #0f172a;
-  --foreground: #f1f5f9;
+  --background: #f8fafc;
+  --foreground: #0f172a;
 
-  /* Colors — Institutional Dark Palette */
-  --color-primary: #0f172a;
-  --color-primary-light: #1e293b;
-  --color-primary-dark: #020617;
+  /* Colors — Light Mode & Blue Accent */
+  --color-primary: #f1f5f9;
+  /* Slate 100 */
+  --color-primary-light: #e2e8f0;
+  /* Slate 200 */
+  --color-primary-dark: #cbd5e1;
+  /* Slate 300 */
 
-  --color-accent: #2563eb;
-  --color-accent-hover: #1d4ed8;
-  --color-accent-light: rgba(37, 99, 235, 0.12);
+  --color-accent: #4f46e5;
+  /* Indigo 600 */
+  --color-accent-hover: #4338ca;
+  /* Indigo 700 */
+  --color-accent-light: #eef2ff;
+  /* Indigo 50 */
 
-  --color-background: #0f172a;
-  --color-surface: #1e293b;
-  --color-surface-raised: #263348;
-  --color-border: #334155;
+  --color-background: #f8fafc;
+  /* Slate 50 */
+  --color-surface: #ffffff;
+  /* White */
+  --color-surface-raised: #f1f5f9;
+  /* Slate 100 */
+  --color-border: #e2e8f0;
+  /* Slate 200 */
 
-  --color-text-main: #f1f5f9;
-  --color-text-muted: #94a3b8;
-  --color-text-subtle: #64748b;
+  --color-text-main: #0f172a;
+  /* Slate 900 */
+  --color-text-muted: #64748b;
+  /* Slate 500 */
+  --color-text-subtle: #94a3b8;
+  /* Slate 400 */
 
-  --color-success: #10b981;
-  --color-success-light: rgba(16, 185, 129, 0.12);
-  --color-warning: #f59e0b;
-  --color-warning-light: rgba(245, 158, 11, 0.12);
-  --color-error: #ef4444;
-  --color-error-light: rgba(239, 68, 68, 0.12);
+  --color-success: #059669;
+  /* Emerald 600 */
+  --color-success-light: #ecfdf5;
+  /* Emerald 50 */
+  --color-warning: #d97706;
+  /* Amber 600 */
+  --color-warning-light: #fffbeb;
+  /* Amber 50 */
+  --color-error: #dc2626;
+  /* Red 600 */
+  --color-error-light: #fef2f2;
+  /* Red 50 */
   --color-info: #3b82f6;
+  /* Blue 500 */
 
   /* Typography */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
@@ -47,11 +69,11 @@
   --radius-lg: 1rem;
   --radius-xl: 1.5rem;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
-  --shadow-glow: 0 0 24px rgba(37, 99, 235, 0.25);
+  /* Shadows - More prominent for light mode */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-glow: 0 0 20px rgba(79, 70, 229, 0.15);
 
   /* Transitions */
   --transition-fast: 150ms ease;
