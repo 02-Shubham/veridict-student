@@ -4,6 +4,9 @@ import { useExamStore } from '../../lib/store/examStore'
 import { examService } from '../../lib/services/exam'
 import { storageService } from '../../lib/services/storage'
 import { proctoringService } from '../../lib/services/proctoring'
+import { useSecurityMonitor } from '../../lib/hooks/useSecurityMonitor'
+import { WarningOverlay } from '../security/WarningOverlay'
+import { TerminationScreen } from '../security/TerminationScreen'
 import type { Question } from '../../lib/types'
 import styles from './ExamScreen.module.css'
 
@@ -24,6 +27,17 @@ export const ExamScreen: React.FC = () => {
   const [submitting, setSubmitting] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const autoSaveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Security monitoring
+  const {
+    violationState,
+    currentViolation,
+    isTerminated,
+    startMonitoring,
+    stopMonitoring,
+    dismissWarning,
+    requestFullscreen
+  } = useSecurityMonitor()
 
   // Helper helper to access latest state without re-rendering dependencies
   const getCleanState = () => useExamStore.getState()
@@ -67,10 +81,27 @@ export const ExamScreen: React.FC = () => {
 
     setShowConfirmDialog(false)
     setSubmitting(true)
+    
     try {
       await triggerAutoSave()
-      const result = await examService.submitExam(session.examId, answers)
+      
+      // Include violation data in submission
+      const violationData = violationState
+      
+      const result = await examService.submitExam(session.examId, {
+        ...answers,
+        violations: violationData.violations,
+        violationSummary: {
+          totalViolations: violationData.totalViolations,
+          focusLossCount: violationData.focusLossCount,
+          copyPasteCount: violationData.copyPasteCount,
+          fullscreenExitCount: violationData.fullscreenExitCount,
+          devToolsDetected: violationData.devToolsDetected
+        }
+      })
+      
       setSubmission(result)
+      stopMonitoring()
       proctoringService.exitFullscreen()
       setScreen('CONFIRMATION')
     } catch {
@@ -123,6 +154,7 @@ export const ExamScreen: React.FC = () => {
   // Load saved answers on mount
   useEffect(() => {
     if (!session) return
+    
     storageService.loadAnswers(session.examId).then((saved) => {
       if (Object.keys(saved).length > 0) {
         useExamStore.getState().loadAnswers(saved)
@@ -134,8 +166,24 @@ export const ExamScreen: React.FC = () => {
       timestamp: new Date().toISOString(),
       metadata: 'Exam Screen Mount'
     })
+    
+    // Start security monitoring
+    startMonitoring()
+    
+    // Request fullscreen
+    requestFullscreen().then(success => {
+      if (!success) {
+        console.warn('Failed to enter fullscreen mode')
+      }
+    })
+    
     proctoringService.enterFullscreen()
-  }, [session])
+
+    // Cleanup on unmount
+    return () => {
+      stopMonitoring()
+    }
+  }, [session, startMonitoring, stopMonitoring, requestFullscreen])
 
   // Auto-save interval
   useEffect(() => {
@@ -151,6 +199,17 @@ export const ExamScreen: React.FC = () => {
 
   if (!session) return null
 
+  // Show termination screen if exam is terminated
+  if (isTerminated) {
+    return (
+      <TerminationScreen
+        violationState={violationState}
+        submissionId={useExamStore.getState().submission?.submissionId}
+        examTitle={session.title}
+      />
+    )
+  }
+
   const questions = session.questions
   const currentQuestion: Question | undefined = questions[currentQuestionIndex]
   const answeredCount = Object.keys(answers).filter((k) => answers[k]?.value?.trim()).length
@@ -159,6 +218,17 @@ export const ExamScreen: React.FC = () => {
 
   return (
     <div className={styles.container}>
+      {/* Warning Overlay */}
+      {currentViolation && !isTerminated && (
+        <WarningOverlay
+          violationType={currentViolation.type}
+          violationCount={violationState.totalViolations}
+          maxViolations={3}
+          description={currentViolation.description}
+          onContinue={dismissWarning}
+          isTerminated={false}
+        />
+      )}
       {/* Header bar */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
