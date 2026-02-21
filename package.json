@@ -6,26 +6,41 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "agent:blockchain": "tsx scripts/blockchain-agent.ts"
   },
   "dependencies": {
+    "@tensorflow-models/coco-ssd": "^2.2.3",
+    "@tensorflow/tfjs": "^4.22.0",
+    "dotenv": "^17.3.1",
+    "ethers": "^6.16.0",
     "firebase": "^12.9.0",
+    "firebase-admin": "^13.6.1",
+    "html2canvas": "^1.4.1",
     "idb": "^8.0.3",
+    "jspdf": "^4.2.0",
     "lucide-react": "^0.574.0",
     "next": "16.1.6",
     "postcss": "^8.5.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "solc": "^0.8.34",
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@firebase/firestore": "^4.11.0",
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.20",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "hardhat": "^3.1.9",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5"
-  }
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "type": "module"
 }

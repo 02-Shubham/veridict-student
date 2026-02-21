@@ -1,12 +1,16 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useUIStore } from '../../lib/store/uiStore'
 import { useExamStore } from '../../lib/store/examStore'
+import { useAuthStore } from '../../lib/store/authStore'
 import { examService } from '../../lib/services/exam'
 import { storageService } from '../../lib/services/storage'
 import { proctoringService } from '../../lib/services/proctoring'
 import { useSecurityMonitor } from '../../lib/hooks/useSecurityMonitor'
+import { securityMonitor } from '../../lib/security/monitor-service'
+import { violationController } from '../../lib/security/ViolationController'
 import { WarningOverlay } from '../security/WarningOverlay'
 import { TerminationScreen } from '../security/TerminationScreen'
+import { ProctoringView } from './ProctoringView'
 import type { Question } from '../../lib/types'
 import styles from './ExamScreen.module.css'
 
@@ -45,7 +49,7 @@ export const ExamScreen: React.FC = () => {
   const triggerAutoSave = useCallback(async () => {
     const { session, answers, setAutoSaveStatus, setLastSavedAt } = getCleanState()
     if (!session) return
-    
+
     setAutoSaveStatus('saving')
     try {
       for (const [qId, ans] of Object.entries(answers)) {
@@ -61,12 +65,13 @@ export const ExamScreen: React.FC = () => {
 
   const handleAutoSubmit = useCallback(async () => {
     const { session, answers, setSubmission } = getCleanState()
-    if (!session) return
-    
+    const user = useAuthStore.getState().user
+    if (!session || !user) return
+
     setSubmitting(true)
     try {
       await triggerAutoSave()
-      const result = await examService.submitExam(session.examId, answers)
+      const result = await examService.submitExam(session.examId, user.uid, answers)
       setSubmission(result)
       proctoringService.exitFullscreen()
       setScreen('CONFIRMATION')
@@ -77,18 +82,19 @@ export const ExamScreen: React.FC = () => {
 
   const handleManualSubmit = async () => {
     const { session, answers, setSubmission } = getCleanState()
-    if (!session) return
+    const user = useAuthStore.getState().user
+    if (!session || !user) return
 
     setShowConfirmDialog(false)
     setSubmitting(true)
-    
+
     try {
       await triggerAutoSave()
-      
+
       // Include violation data in submission
       const violationData = violationState
-      
-      const result = await examService.submitExam(session.examId, {
+
+      const result = await examService.submitExam(session.examId, user.uid, {
         ...answers,
         violations: violationData.violations,
         violationSummary: {
@@ -96,10 +102,12 @@ export const ExamScreen: React.FC = () => {
           focusLossCount: violationData.focusLossCount,
           copyPasteCount: violationData.copyPasteCount,
           fullscreenExitCount: violationData.fullscreenExitCount,
-          devToolsDetected: violationData.devToolsDetected
+          devToolsDetected: violationData.devToolsDetected,
+          cellPhoneCount: violationData.cellPhoneCount,
+          noPersonCount: violationData.noPersonCount,
         }
       })
-      
+
       setSubmission(result)
       stopMonitoring()
       proctoringService.exitFullscreen()
@@ -136,7 +144,7 @@ export const ExamScreen: React.FC = () => {
   // Countdown timer
   useEffect(() => {
     if (timeLeft <= 0) return
-    
+
     const interval = setInterval(() => {
       setTimeLeft((t) => {
         if (t <= 1) {
@@ -147,36 +155,36 @@ export const ExamScreen: React.FC = () => {
         return t - 1
       })
     }, 1000)
-    
+
     return () => clearInterval(interval)
   }, [timeLeft > 0, handleAutoSubmit])
 
   // Load saved answers on mount
   useEffect(() => {
     if (!session) return
-    
+
     storageService.loadAnswers(session.examId).then((saved) => {
       if (Object.keys(saved).length > 0) {
         useExamStore.getState().loadAnswers(saved)
       }
     })
-    
+
     storageService.logProctoringEvent(session.examId, {
       type: 'WINDOW_SWITCH',
       timestamp: new Date().toISOString(),
       metadata: 'Exam Screen Mount'
     })
-    
+
     // Start security monitoring
     startMonitoring()
-    
+
     // Request fullscreen
     requestFullscreen().then(success => {
       if (!success) {
         console.warn('Failed to enter fullscreen mode')
       }
     })
-    
+
     proctoringService.enterFullscreen()
 
     // Cleanup on unmount
@@ -191,11 +199,28 @@ export const ExamScreen: React.FC = () => {
     autoSaveTimerRef.current = setInterval(() => {
       triggerAutoSave()
     }, 30_000)
-    
+
     return () => {
       if (autoSaveTimerRef.current) clearInterval(autoSaveTimerRef.current)
     }
   }, [session, triggerAutoSave])
+
+  // Prevent global copy/paste/cut formatting
+  useEffect(() => {
+    const handleCopyPaste = (e: ClipboardEvent) => {
+      e.preventDefault()
+    }
+
+    window.addEventListener('copy', handleCopyPaste)
+    window.addEventListener('paste', handleCopyPaste)
+    window.addEventListener('cut', handleCopyPaste)
+
+    return () => {
+      window.removeEventListener('copy', handleCopyPaste)
+      window.removeEventListener('paste', handleCopyPaste)
+      window.removeEventListener('cut', handleCopyPaste)
+    }
+  }, [])
 
   if (!session) return null
 
@@ -218,6 +243,9 @@ export const ExamScreen: React.FC = () => {
 
   return (
     <div className={styles.container}>
+      {/* ML Camera Proctoring Override */}
+      <ProctoringView />
+
       {/* Warning Overlay */}
       {currentViolation && !isTerminated && (
         <WarningOverlay
@@ -301,6 +329,15 @@ export const ExamScreen: React.FC = () => {
                   className={styles.answerTextarea}
                   value={answers[currentQuestion.id]?.value ?? ''}
                   onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+                  onCopy={(e) => {
+                    e.preventDefault();
+                  }}
+                  onPaste={(e) => {
+                    e.preventDefault();
+                  }}
+                  onCut={(e) => {
+                    e.preventDefault();
+                  }}
                   placeholder="Type your answer here…"
                   rows={10}
                   disabled={submitting}

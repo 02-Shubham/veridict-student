@@ -13,14 +13,14 @@ export const authService = {
     const credential = await signInWithEmailAndPassword(auth, email, password)
     const uid = credential.user.uid
 
-    const studentDoc = await getDoc(doc(db, 'students', uid))
+    const userDoc = await getDoc(doc(db, 'users', uid))
 
-    if (!studentDoc.exists()) {
+    if (!userDoc.exists()) {
       await signOut(auth)
-      throw new Error('No student account found. Please contact your administrator.')
+      throw new Error('No user account found. Please contact your administrator.')
     }
 
-    const data = studentDoc.data()
+    const data = userDoc.data()
     if (data.role !== 'STUDENT') {
       await signOut(auth)
       throw new Error('Access denied. This app is for students only.')
@@ -38,9 +38,10 @@ export const authService = {
     const credential = await createUserWithEmailAndPassword(auth, email, password)
     const uid = credential.user.uid
 
-    // Create student document so role check passes on future logins
-    await setDoc(doc(db, 'students', uid), {
+    // Create user document so role check passes on future logins
+    await setDoc(doc(db, 'users', uid), {
       uid,
+      studentId: uid,
       email,
       name,
       role: 'STUDENT',

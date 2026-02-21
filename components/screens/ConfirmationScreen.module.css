@@ -228,3 +228,121 @@
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
 }
+
+.loaderOverlay {
+    position: absolute;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    text-align: center;
+    padding: 2rem;
+    animation: fadeIn 0.4s ease-out;
+}
+
+@media (prefers-color-scheme: dark) {
+    .loaderOverlay {
+        background: rgba(15, 23, 42, 0.85);
+    }
+}
+
+.spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(168, 85, 247, 0.2);
+    border-top-color: #a855f7;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 2rem;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.loaderTitle {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 0.75rem;
+}
+
+.loaderText {
+    font-size: 1.05rem;
+    color: rgba(255, 255, 255, 0.9);
+    max-width: 450px;
+    line-height: 1.6;
+}
+
+.blurred {
+    filter: blur(8px);
+    pointer-events: none;
+    opacity: 0.4;
+    transition: all 0.5s ease-out;
+}
+
+.actionButtons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.downloadBtn {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+    color: white;
+    border: none;
+}
+
+.downloadBtn:hover {
+    background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary));
+    color: white;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.downloadBtn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.confirmedIcon {
+    font-size: 1.1rem;
+}
+
+.failedIcon {
+    font-size: 1.1rem;
+}
+
+.txHashLine {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--color-border);
+    font-size: 0.8rem;
+}
+
+.txHashText {
+    font-family: var(--font-mono);
+    color: var(--color-text-muted);
+    word-break: break-all;
+}

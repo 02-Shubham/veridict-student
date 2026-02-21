@@ -51,7 +51,8 @@ export interface ProctoringEvent {
 export interface SubmissionResult {
   submissionId: string
   payloadHash: string
-  blockchainStatus: 'pending' | 'confirmed'
+  blockchainStatus: 'pending' | 'confirmed' | 'failed'
+  blockchainTxHash?: string
 }
 
 export type AppScreen =

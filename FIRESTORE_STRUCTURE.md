@@ -401,16 +401,19 @@ const questions = await getDocs(questionsQuery)
 
 ---
 
-## 3. STUDENTS Collection (Optional)
+## 3. USERS Collection (Unified Authentication)
 
-**Collection Path:** `students/{uid}`
+**Collection Path:** `users/{uid}`
+
+> **Note:** The parallel `students` collection is deprecated. All authorization should rely strictly on the `role` property (`"TEACHER" | "STUDENT" | "ADMIN"`).
 
 ```typescript
 {
+  uid: string,
   email: string,
   name: string,
-  role: "STUDENT",
-  examHistory: string[],           // Array of exam IDs
+  role: "STUDENT" | "TEACHER" | "ADMIN",
+  studentId?: string,              // Retained for backward compatibility
   createdAt: Timestamp
 }
 ```
@@ -450,10 +453,10 @@ service cloud.firestore {
       allow update, delete: if false; // No updates after submission
     }
     
-    // STUDENTS - Users can read their own data
-    match /students/{uid} {
+    // USERS - Users can read their own data
+    match /users/{uid} {
       allow read: if isAuthenticated() && request.auth.uid == uid;
-      allow write: if isTeacher();
+      allow write: if isTeacher() || (isAuthenticated() && request.auth.uid == uid);
     }
   }
 }

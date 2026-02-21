@@ -91,8 +91,12 @@ export const TerminationScreen: React.FC<TerminationScreenProps> = ({
               <span className={styles.breakdownValue}>{violationState.focusLossCount}</span>
             </div>
             <div className={styles.breakdownItem}>
-              <span className={styles.breakdownLabel}>Copy/Paste Attempts</span>
-              <span className={styles.breakdownValue}>{violationState.copyPasteCount}</span>
+              <span className={styles.breakdownLabel}>Cell Phone Detected</span>
+              <span className={styles.breakdownValue}>{violationState.cellPhoneCount}</span>
+            </div>
+            <div className={styles.breakdownItem}>
+              <span className={styles.breakdownLabel}>Person Missing</span>
+              <span className={styles.breakdownValue}>{violationState.noPersonCount}</span>
             </div>
             <div className={styles.breakdownItem}>
               <span className={styles.breakdownLabel}>Fullscreen Exits</span>
@@ -154,7 +158,7 @@ export const TerminationScreen: React.FC<TerminationScreenProps> = ({
         </div>
 
         {/* Close Button */}
-        <button 
+        <button
           onClick={() => window.location.href = '/'}
           className={styles.closeButton}
         >

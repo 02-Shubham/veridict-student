@@ -5,13 +5,15 @@
  * the 3-strike rule with escalating warnings.
  */
 
-export type ViolationType = 
+export type ViolationType =
   | 'FOCUS_LOSS'
   | 'COPY_PASTE'
   | 'DEVTOOLS'
   | 'FULLSCREEN_EXIT'
   | 'CONTEXT_MENU'
   | 'SUSPICIOUS_KEYSTROKE'
+  | 'CELL_PHONE'
+  | 'NO_PERSON'
 
 export type ViolationSeverity = 'warning' | 'critical' | 'immediate'
 
@@ -28,6 +30,8 @@ export interface ViolationState {
   copyPasteCount: number
   devToolsDetected: boolean
   fullscreenExitCount: number
+  cellPhoneCount: number
+  noPersonCount: number
   totalViolations: number
   violations: Violation[]
   isTerminated: boolean
@@ -42,6 +46,8 @@ class ViolationController {
     copyPasteCount: 0,
     devToolsDetected: false,
     fullscreenExitCount: 0,
+    cellPhoneCount: 0,
+    noPersonCount: 0,
     totalViolations: 0,
     violations: [],
     isTerminated: false
@@ -64,7 +70,7 @@ class ViolationController {
     }
 
     const severity = this.getSeverity(type)
-    
+
     const violation: Violation = {
       type,
       timestamp: new Date().toISOString(),
@@ -90,6 +96,12 @@ class ViolationController {
         break
       case 'FULLSCREEN_EXIT':
         this.state.fullscreenExitCount++
+        break
+      case 'CELL_PHONE':
+        this.state.cellPhoneCount++
+        break
+      case 'NO_PERSON':
+        this.state.noPersonCount++
         break
     }
 
@@ -140,6 +152,10 @@ class ViolationController {
         return this.state.copyPasteCount
       case 'FULLSCREEN_EXIT':
         return this.state.fullscreenExitCount
+      case 'CELL_PHONE':
+        return this.state.cellPhoneCount
+      case 'NO_PERSON':
+        return this.state.noPersonCount
       default:
         return 0
     }
@@ -156,8 +172,7 @@ class ViolationController {
    * Check if violation count exceeds threshold
    */
   private shouldTerminateByCount(type: ViolationType): boolean {
-    const count = this.getViolationCount(type)
-    return count >= this.MAX_VIOLATIONS
+    return this.state.totalViolations >= this.MAX_VIOLATIONS
   }
 
   /**
@@ -178,7 +193,7 @@ class ViolationController {
    */
   subscribe(callback: ViolationCallback): () => void {
     this.listeners.add(callback)
-    
+
     // Return unsubscribe function
     return () => {
       this.listeners.delete(callback)
@@ -209,7 +224,7 @@ class ViolationController {
    * Get warning level (1, 2, or 3)
    */
   getWarningLevel(type: ViolationType): number {
-    return Math.min(this.getViolationCount(type), this.MAX_VIOLATIONS)
+    return Math.min(this.state.totalViolations, this.MAX_VIOLATIONS)
   }
 
   /**
@@ -235,6 +250,8 @@ class ViolationController {
       copyPasteCount: 0,
       devToolsDetected: false,
       fullscreenExitCount: 0,
+      cellPhoneCount: 0,
+      noPersonCount: 0,
       totalViolations: 0,
       violations: [],
       isTerminated: false
@@ -252,6 +269,8 @@ class ViolationController {
       focusLossCount: number
       copyPasteCount: number
       fullscreenExitCount: number
+      cellPhoneCount: number
+      noPersonCount: number
       devToolsDetected: boolean
       isTerminated: boolean
       terminationReason?: string
@@ -264,6 +283,8 @@ class ViolationController {
         focusLossCount: this.state.focusLossCount,
         copyPasteCount: this.state.copyPasteCount,
         fullscreenExitCount: this.state.fullscreenExitCount,
+        cellPhoneCount: this.state.cellPhoneCount,
+        noPersonCount: this.state.noPersonCount,
         devToolsDetected: this.state.devToolsDetected,
         isTerminated: this.state.isTerminated,
         terminationReason: this.state.terminationReason
